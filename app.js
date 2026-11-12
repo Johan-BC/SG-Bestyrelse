@@ -38,7 +38,7 @@ function fdate(s, long) {
   return d.toLocaleDateString("da-DK", long ? { weekday: "long", day: "numeric", month: "long", year: "numeric" } : { day: "numeric", month: "short", year: "numeric" });
 }
 function toast(t) { const el = document.getElementById("toast"); el.textContent = t; el.style.display = "block"; clearTimeout(toast.t); toast.t = setTimeout(() => { el.style.display = "none"; }, 3000); }
-function view() { const h = location.hash; return h === "#opgaver" ? "tasks" : h === "#forslag" ? "proposals" : h === "#medlemmer" ? "members" : "meetings"; }
+function view() { const h = location.hash; return h === "#opgaver" ? "tasks" : h === "#medlemmer" ? "members" : "meetings"; }
 function sorted() { return Object.values(meetings).sort((a, b) => (b.date || "9999") < (a.date || "9999") ? -1 : 1); }
 
 /* ---------- backends ---------- */
@@ -196,6 +196,7 @@ function renderList() {
     h += '<button class="card meet" data-act="open" data-m="' + esc(m.id) + '"><span class="d">' + esc(fdate(m.date, true)) + '</span><span class="row">' + chipAgenda(m) + chipMin(m)
       + (open ? '<span class="chip">' + open + (open === 1 ? " åben opgave" : " åbne opgaver") + '</span>' : "") + '</span><span class="muted small">' + ((m.items || []).length + 1) + ' punkter' + (m.place ? " - " + esc(m.place) : "") + '</span></button>';
   });
+  h += proposalsHtml();
   if (LOCAL) h += '<p class="note">Lokal prøveversion med eksempeldata. Du er formand, og ændringer gemmes kun i denne browser.</p>';
   app.innerHTML = h;
 }
@@ -212,8 +213,8 @@ function renderTasks() {
   document.getElementById("f-status").value = S.filter; document.getElementById("f-owner").value = S.owner;
 }
 
-function renderProposals() {
-  let h = '<h2>Forslag til dagsordenen</h2>';
+function proposalsHtml() {
+  let h = '<h2 id="forslag">Forslag til kommende møder</h2>';
   if (S.err) h += '<p class="note err">' + esc(S.err) + '</p>';
   h += '<section class="card"><h3>Nyt forslag</h3><p class="small muted">Forslaget kommer først på dagsordenen, når formanden har godkendt det.</p>'
     + '<label for="p-title">Emne<input id="p-title" maxlength="140"></label><label for="p-note">Uddybning<textarea id="p-note" placeholder="Hvad vil du have drøftet eller besluttet?"></textarea></label>'
@@ -234,7 +235,7 @@ function renderProposals() {
     }
     h += '</div>';
   });
-  app.innerHTML = h + '</section>';
+  return h + '</section>';
 }
 
 function renderMembers() {
@@ -267,7 +268,7 @@ function agendaRead(m) {
   let h = '<section class="card"><div class="row between"><h3>Dagsorden</h3><span class="row">' + (isAdmin() ? '<button data-act="a-edit">Rediger</button>' : "") + '<button data-act="copy-a">Kopiér</button></span></div><ol class="agenda">';
   (m.items || []).forEach(it => { h += '<li><div><h4>' + esc(it.title || "(uden titel)") + '</h4>' + (it.note ? '<p class="muted small pre">' + esc(it.note) + '</p>' : "") + (it.by ? '<p class="small muted">Foreslået af ' + esc(nameOf(it.by)) + '</p>' : "") + '</div></li>'; });
   h += '<li><div><h4>Eventuelt</h4></div></li></ol>';
-  if (pend && (!m.minutes)) h += '<p class="note">' + pend + (pend === 1 ? " forslag afventer" : " forslag afventer") + ' formandens godkendelse. Se fanen Forslag.</p>';
+  if (pend && (!m.minutes)) h += '<p class="note">' + pend + (pend === 1 ? " forslag afventer" : " forslag afventer") + ' formandens godkendelse. Se forslagene under Møder.</p>';
   return h + '</section>';
 }
 function agendaEdit() {
@@ -322,13 +323,13 @@ function minutesEdit(m) {
 
 function render() {
   const v = view(), inn = authState === "in";
-  [["moeder", "meetings"], ["opgaver", "tasks"], ["forslag", "proposals"], ["medlemmer", "members"]].forEach(([id, name]) => { document.getElementById("nav-" + id).className = inn && v === name ? "on" : ""; });
+  [["moeder", "meetings"], ["opgaver", "tasks"], ["medlemmer", "members"]].forEach(([id, name]) => { document.getElementById("nav-" + id).className = inn && v === name ? "on" : ""; });
   document.getElementById("nav").style.display = inn ? "" : "none";
   document.getElementById("nav-okonomi").style.display = LOCAL ? "none" : "";
   const who = document.getElementById("who");
   who.innerHTML = inn && me ? '<span class="small muted">' + esc(me.name) + " - " + esc(me.role) + '</span>' + (LOCAL ? "" : '<button class="icon small" data-act="au-out">Log ud</button>') : "";
   if (!inn) return renderAuth();
-  if (v === "tasks") renderTasks(); else if (v === "proposals") renderProposals(); else if (v === "members") renderMembers(); else if (S.cur) renderMeeting(); else renderList();
+  if (v === "tasks") renderTasks(); else if (v === "members") renderMembers(); else if (S.cur) renderMeeting(); else renderList();
 }
 
 /* ---------- minutes helpers ---------- */
