@@ -188,7 +188,12 @@ function renderAuth() {
   else if (authState === "verify") h = '<div class="card"><h3>Bekræft din mail</h3><p>Vi har sendt en mail med et link. Klik på linket, og tryk så på knappen her. Tjek også spam.</p>'
     + (authMsg ? '<p class="note err">' + esc(authMsg) + '</p>' : "")
     + '<div class="row"><button class="primary" data-act="au-check">Jeg har bekræftet</button><button data-act="au-resend">Send mailen igen</button><button data-act="au-out">Log ud</button></div></div>';
-  else if (authState === "nomember") h = '<div class="card"><h3>Ingen adgang</h3><p>Din mail er ikke oprettet som medlem af bestyrelsen. Bed formanden oprette dig, og log så ind igen.</p><div class="row"><button data-act="au-out">Log ud</button></div></div>';
+  else if (authState === "nomember") {
+    const who = (!LOCAL && FireB.A && FireB.A.currentUser) ? FireB.A.currentUser.email : "";
+    h = '<div class="card"><h3>Ingen adgang</h3><p>Du er logget ind som <strong>' + esc(who) + '</strong>, men den mail er ikke oprettet som medlem af bestyrelsen.</p>'
+      + '<p class="small muted">Send mailadressen ovenfor til formanden, præcis som den står. Når du er oprettet, trykker du Prøv igen.</p>'
+      + '<div class="row"><button class="primary" data-act="au-retry">Prøv igen</button><button data-act="au-out">Log ud</button></div></div>';
+  }
   app.innerHTML = (linkMsg && authState !== "loading" ? '<p class="note">' + esc(linkMsg) + '</p>' : "") + h;
 }
 
@@ -379,6 +384,7 @@ async function authAct(a) {
   const f = FireB.f, A = FireB.A; authMsg = "";
   try {
     if (a === "au-out") { await B.signOut(); return; }
+    if (a === "au-retry") { const u = A.currentUser; if (!u) { authState = "out"; return render(); } await u.reload(); await u.getIdToken(true); await FireB.enter(u); return; }
     if (a === "reload") { location.reload(); return; }
     if (a === "au-setpw") { await f.confirmPasswordReset(A, FireB.resetCode, document.getElementById("au-new").value); FireB.resetCode = null; linkMsg = "Adgangskoden er ændret. Log ind med den nye."; authState = A.currentUser ? authState : "out"; await f.signOut(A); return; }
     if (a === "au-in") await f.signInWithEmailAndPassword(A, val("au-mail"), document.getElementById("au-pw").value);
