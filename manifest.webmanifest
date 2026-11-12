@@ -1,0 +1,28 @@
+{
+ "name": "Strong Gym bestyrelse",
+ "short_name": "Strong Gym",
+ "start_url": "./",
+ "scope": "./",
+ "display": "standalone",
+ "background_color": "#333031",
+ "theme_color": "#333031",
+ "lang": "da",
+ "icons": [
+  {
+   "src": "icon-192.png",
+   "sizes": "192x192",
+   "type": "image/png"
+  },
+  {
+   "src": "icon-512.png",
+   "sizes": "512x512",
+   "type": "image/png"
+  },
+  {
+   "src": "icon-maskable-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "maskable"
+  }
+ ]
+}

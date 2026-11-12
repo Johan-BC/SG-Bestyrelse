@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#333031">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Strong Gym bestyrelse</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: one narrow working column, meetings as a ledger, fixed section order on every meeting */
+:root{
+  --bg:#f2f4f1; --surface:#ffffff; --ink:#171b1a; --muted:#5f6966; --line:#d9ded9;
+  --accent:#8a6a00; --accent-ink:#ffffff;
+  --good:#2b7a4b; --warn:#9a5b08; --crit:#b3261e;
+  --display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"Barlow","Segoe UI",Helvetica,Arial,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#111514; --surface:#1a1f1e; --ink:#e8ecea; --muted:#98a29f; --line:#2d3433;
+    --accent:#e2b93b; --accent-ink:#1a1a1a; --good:#6cc48c; --warn:#e0a653; --crit:#f08a80;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#111514; --surface:#1a1f1e; --ink:#e8ecea; --muted:#98a29f; --line:#2d3433;
+  --accent:#e2b93b; --accent-ink:#1a1a1a; --good:#6cc48c; --warn:#e0a653; --crit:#f08a80;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5}
+.wrap{max-width:760px;margin:0 auto;padding:20px 16px 64px;display:flex;flex-direction:column;gap:20px}
+header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;border-bottom:2px solid var(--ink);padding-bottom:10px}
+h1{font-family:var(--display);font-size:30px;line-height:1;margin:0;text-transform:uppercase;letter-spacing:.02em}
+h2{font-family:var(--display);font-size:24px;line-height:1.1;margin:0;text-wrap:balance}
+h3{font-family:var(--display);font-size:19px;margin:0;text-transform:uppercase;letter-spacing:.04em}
+h4{font-size:16px;font-weight:600;margin:0}
+p{margin:0}
+nav{display:flex;gap:4px}
+nav a{padding:6px 12px;border-radius:6px;text-decoration:none;color:var(--muted);font-weight:600}
+nav a.on{background:var(--ink);color:var(--bg)}
+.stack{display:flex;flex-direction:column;gap:12px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.between{justify-content:space-between}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:16px;display:flex;flex-direction:column;gap:14px}
+.muted{color:var(--muted)}
+.small{font-size:14px}
+.pre{white-space:pre-wrap;overflow-wrap:anywhere}
+button{font:inherit;font-weight:600;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:8px 12px;cursor:pointer}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+button.danger{color:var(--crit)}
+button.icon{padding:4px 9px}
+button:disabled{opacity:.5;cursor:default}
+button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+input,textarea,select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 10px;width:100%;min-width:0}
+textarea{resize:vertical;min-height:72px}
+label{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;color:var(--muted);flex:1 1 140px}
+.chip{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:99px;border:1px solid currentColor;white-space:nowrap}
+.chip.good{color:var(--good)} .chip.warn{color:var(--warn)} .chip.crit{color:var(--crit)} .chip.none{color:var(--muted)}
+.meet{display:flex;flex-direction:column;gap:6px;text-align:left;width:100%;padding:14px 16px;border-left:4px solid var(--accent)}
+.meet .d{font-family:var(--display);font-size:21px}
+ol.agenda{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:12px;counter-reset:p}
+ol.agenda>li{counter-increment:p;display:grid;grid-template-columns:28px 1fr;gap:4px 8px}
+ol.agenda>li::before{content:counter(p) ".";font-family:var(--display);font-size:19px;font-variant-numeric:tabular-nums;color:var(--accent)}
+ol.agenda>li>div{display:flex;flex-direction:column;gap:6px;min-width:0}
+ul.dec{margin:0;padding-left:18px}
+.task{display:grid;grid-template-columns:24px 1fr;gap:8px;align-items:start;padding:8px 0;border-top:1px solid var(--line)}
+.task:first-child{border-top:0}
+.task input[type=checkbox]{width:20px;height:20px;margin-top:2px;accent-color:var(--good)}
+.task.done .tt{text-decoration:line-through;color:var(--muted)}
+.tedit{border-top:1px solid var(--line);padding-top:10px;display:flex;flex-direction:column;gap:8px}
+.note{border-left:3px solid var(--warn);padding:6px 10px;font-size:14px}
+.err{border-left-color:var(--crit);color:var(--crit)}
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:6px;font-size:14px;display:none;max-width:90%}
+@media (prefers-reduced-motion:no-preference){button{transition:opacity .15s}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>Strong Gym bestyrelse</h1>
+    <nav><a href="#moeder" id="nav-moeder">Møder</a><a href="#opgaver" id="nav-opgaver">Opgaver</a></nav>
+  </header>
+  <main id="app" class="stack"><p class="muted">Henter møder...</p></main>
+</div>
+<div id="toast" role="status"></div>
+<script>
+(function(){
+"use strict";
+var TEMPLATE=["Godkendelse af referat fra sidste møde","Opfølgning på opgaver og aftaler","Økonomi"];
+var NOT_TREATED="Punktet blev ikke behandlet på mødet.";
+var canWrite=false,loaded=false,loadNote="",token="",sha="",queue=Promise.resolve();
+var LOCAL=window.SG_LOCAL||null; // set only by the local trial file: data lives in this browser, no GitHub, no code
+var code="",sealed=null,needCode=false,codeErr="",keyCache={};
+var OWNER=location.hostname.split(".")[0],REPO=location.pathname.split("/").filter(Boolean)[0]||"";
+var API="https://api.github.com/repos/"+OWNER+"/"+REPO+"/contents/data.json";
+var meetings={};           // id -> data
+var S={cur:null,aDraft:null,mDraft:null,transcript:"",busy:false,err:"",confirmDel:false,admin:false,filter:"open",owner:""};
+var app=document.getElementById("app");
+
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
+function clone(o){return JSON.parse(JSON.stringify(o));}
+function today(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+function fdate(s,long){if(!s)return "Dato mangler";var d=new Date(s+"T12:00:00");if(isNaN(d))return s;
+  return d.toLocaleDateString("da-DK",long?{weekday:"long",day:"numeric",month:"long",year:"numeric"}:{day:"numeric",month:"short",year:"numeric"});}
+function toast(t){var el=document.getElementById("toast");el.textContent=t;el.style.display="block";clearTimeout(toast.t);toast.t=setTimeout(function(){el.style.display="none";},2600);}
+function view(){return location.hash==="#opgaver"?"tasks":"meetings";}
+function sorted(){return Object.keys(meetings).map(function(id){return meetings[id];}).sort(function(a,b){return (b.date||"9999")<(a.date||"9999")?-1:1;});}
+function cur(){return S.cur?meetings[S.cur]:null;}
+function editing(){return !!(S.aDraft||S.mDraft||S.busy);}
+function b64e(s){return btoa(unescape(encodeURIComponent(s)));}
+function b64d(s){return decodeURIComponent(escape(atob(s.replace(/\s/g,""))));}
+function gh(method,body){return fetch(API+(method==="GET"?"?t="+Date.now():""),{method:method,cache:"no-store",headers:{"Accept":"application/vnd.github+json","Authorization":"Bearer "+token},body:body?JSON.stringify(body):undefined});}
+function bytes(s){var b=atob(s),u=new Uint8Array(b.length);for(var i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u;}
+function b64u(u){var s="";for(var i=0;i<u.length;i++)s+=String.fromCharCode(u[i]);return btoa(s);}
+/* data.json is AES-GCM encrypted with a key derived from the board's shared code (PBKDF2, 200k rounds). */
+async function keyFor(saltB64){var id=code+"|"+saltB64;if(keyCache[id])return keyCache[id];
+  var km=await crypto.subtle.importKey("raw",new TextEncoder().encode(code),"PBKDF2",false,["deriveKey"]);
+  return keyCache[id]=await crypto.subtle.deriveKey({name:"PBKDF2",salt:bytes(saltB64),iterations:200000,hash:"SHA-256"},km,{name:"AES-GCM",length:256},false,["encrypt","decrypt"]);}
+async function unseal(o){if(!o||!o.ct)return {meetings:(o&&o.meetings)||[]};
+  var pt=await crypto.subtle.decrypt({name:"AES-GCM",iv:bytes(o.iv)},await keyFor(o.salt),bytes(o.ct));return JSON.parse(new TextDecoder().decode(pt));}
+async function seal(d){var salt=(sealed&&sealed.salt)||b64u(crypto.getRandomValues(new Uint8Array(16))),iv=crypto.getRandomValues(new Uint8Array(12));
+  var ct=await crypto.subtle.encrypt({name:"AES-GCM",iv:iv},await keyFor(salt),new TextEncoder().encode(JSON.stringify(d)));
+  return {v:1,salt:salt,iv:b64u(iv),ct:b64u(new Uint8Array(ct))};}
+async function openData(o){sealed=o;loaded=true;
+  if(!code){needCode=true;return;}
+  try{setData(await unseal(o));needCode=false;codeErr="";}
+  catch(e){code="";try{localStorage.removeItem("sg-code");}catch(x){}needCode=true;codeErr="Koden er forkert. Prøv igen.";}}
+function setData(d){meetings={};((d&&d.meetings)||[]).forEach(function(m){if(m&&m.id)meetings[m.id]=m;});loaded=true;loadNote="";}
+function dropToken(){token="";canWrite=false;try{localStorage.removeItem("sg-token");}catch(e){}}
+async function load(){
+  if(LOCAL){var d=null;try{d=JSON.parse(localStorage.getItem("sg-local"));}catch(e){}setData(d||clone(LOCAL));return;}
+  if(token){var r=await gh("GET");
+    if(r.status===401||r.status===403){dropToken();toast("Nøglen virker ikke - du er logget ud som redaktør");return load();}
+    if(r.status===404){sha="";await openData(null);return;}
+    if(!r.ok)throw new Error("load");
+    var j=await r.json();sha=j.sha;await openData(JSON.parse(b64d(j.content)));
+  }else{var r2=await fetch("data.json?t="+Date.now(),{cache:"no-store"});if(!r2.ok)throw new Error("load");await openData(await r2.json());}
+}
+/* All writes replace data.json in the repo, one at a time. On failure the local state is reloaded from the repo. */
+function push(msg){
+  if(LOCAL){try{localStorage.setItem("sg-local",JSON.stringify({meetings:sorted()}));}catch(e){}return Promise.resolve();}
+  queue=queue.catch(function(){}).then(async function(){
+    var box=await seal({meetings:sorted()});var body={message:msg,content:b64e(JSON.stringify(box))};if(sha)body.sha=sha;
+    var r;try{r=await gh("PUT",body);}catch(e){r={ok:false,status:0};}
+    if(r.ok){sha=(await r.json()).content.sha;sealed=box;return;}
+    toast(r.status===409||r.status===422?"Data er ændret et andet sted - henter nyeste":r.status===401||r.status===403?"Nøglen virker ikke - log ind som redaktør igen":"Kunne ikke gemme - tjek forbindelsen");
+    try{await load();}catch(e){}
+    throw new Error("save");
+  });
+  return queue;
+}
+function save(m){meetings[m.id]=clone(m);return push("Opdater møde");}
+function owners(){var o={};sorted().forEach(function(m){(m.tasks||[]).forEach(function(t){if(t.owner)o[t.owner]=1;});});return Object.keys(o).sort();}
+
+/* ---------- text export ---------- */
+function agendaText(m){var L=["Strong Gym - bestyrelsesmøde","Dato: "+fdate(m.date,true)+(m.time?" kl. "+m.time:""),"Sted: "+(m.place||"-"),"","DAGSORDEN"];
+  (m.items||[]).forEach(function(it,i){L.push((i+1)+". "+it.title);if(it.note)L.push("   "+it.note.replace(/\n/g,"\n   "));});
+  L.push(((m.items||[]).length+1)+". Eventuelt");return L.join("\n");}
+function minutesText(m){var mi=m.minutes||{},L=["Strong Gym - referat af bestyrelsesmøde","Dato: "+fdate(m.date,true)+(m.time?" kl. "+m.time:""),"Sted: "+(m.place||"-"),"Til stede: "+(mi.present||"-"),"Afbud: "+(mi.absent||"-"),""];
+  (m.items||[]).forEach(function(it,i){var r=(mi.items||{})[it.id]||{};L.push((i+1)+". "+it.title);L.push(r.summary||NOT_TREATED);
+    var d=(r.decisions||"").split("\n").filter(function(x){return x.trim();});if(d.length){L.push("Beslutninger:");d.forEach(function(x){L.push("- "+x.trim());});}L.push("");});
+  L.push(((m.items||[]).length+1)+". Eventuelt");L.push(mi.eventuelt||"Intet at bemærke.");L.push("");L.push("OPGAVER OG AFTALER");
+  var ts=m.tasks||[];if(!ts.length)L.push("Ingen.");ts.forEach(function(t){L.push("- "+t.text+" (ansvarlig: "+(t.owner||"ikke aftalt")+(t.due?", frist: "+fdate(t.due):"")+")"+(t.done?" [udført]":""));});
+  return L.join("\n");}
+
+/* ---------- render ---------- */
+function chipAgenda(m){return m.agendaStatus==="godkendt"?'<span class="chip good">Dagsorden godkendt</span>':'<span class="chip warn">Dagsorden - klade</span>';}
+function chipMin(m){if(!m.minutes)return '<span class="chip none">Referat mangler</span>';return m.minutes.status==="godkendt"?'<span class="chip good">Referat godkendt</span>':'<span class="chip warn">Referat - klade</span>';}
+function taskRow(m,t){var late=!t.done&&t.due&&t.due<today();
+  return '<div class="task'+(t.done?" done":"")+'"><input type="checkbox" id="tk-'+esc(t.id)+'" data-act="toggle" data-m="'+esc(m.id)+'" data-t="'+esc(t.id)+'"'+(t.done?" checked":"")+(canWrite?"":" disabled")+' aria-label="Udført">'
+    +'<div class="stack" style="gap:4px"><span class="tt pre">'+esc(t.text)+'</span><div class="row small"><span class="chip '+(t.owner?"":"crit")+'">'+esc(t.owner||"Ansvarlig mangler")+'</span>'
+    +(t.due?'<span class="'+(late?"chip crit":"muted")+'">Frist '+esc(fdate(t.due))+(late?" - overskredet":"")+'</span>':'<span class="muted">Ingen frist</span>')
+    +(view()==="tasks"?'<button class="icon small" data-act="open" data-m="'+esc(m.id)+'">Møde '+esc(fdate(m.date))+'</button>':"")+'</div></div></div>';}
+
+function renderList(){
+  var ms=sorted(),h='<div class="row between"><h2>Møder</h2>'+(canWrite?'<button class="primary" data-act="new">Ny dagsorden</button>':"")+'</div>';
+  if(loadNote)h+='<p class="note">'+esc(loadNote)+'</p>';
+  if(!ms.length)h+='<div class="card"><p>Der er ingen møder endnu.</p><p class="muted small">Redaktøren opretter den første dagsorden. Den starter som klade med de faste punkter, og Eventuelt står altid sidst.</p></div>';
+  ms.forEach(function(m){var open=(m.tasks||[]).filter(function(t){return !t.done;}).length;
+    h+='<button class="card meet" data-act="open" data-m="'+esc(m.id)+'"><span class="d">'+esc(fdate(m.date,true))+'</span><span class="row">'+chipAgenda(m)+chipMin(m)
+      +(open?'<span class="chip">'+open+(open===1?' åben opgave':' åbne opgaver')+'</span>':"")+'</span><span class="muted small">'+((m.items||[]).length+1)+' punkter'+(m.place?" - "+esc(m.place):"")+'</span></button>';});
+  if(LOCAL)h+='<p class="note">Lokal prøveversion med eksempeldata. Du er redaktør, og ændringer gemmes kun i denne browser.</p>';
+  else h+='<div class="row small"><button data-act="refresh">Opdater</button><button data-act="admin">'+(canWrite?"Redaktør - logget ind":"Redaktør")+'</button></div>';
+  if(S.admin)h+=canWrite?'<div class="card"><p>Du er logget ind som redaktør på denne telefon.</p><div class="row"><button data-act="admin-out">Log ud</button></div></div>'
+    :'<div class="card"><p class="small">Kun redaktøren kan oprette dagsordener, skrive referat og krydse opgaver af. Indsæt din GitHub-nøgle til dette repo. Den gemmes kun på denne telefon.</p><label for="tok">GitHub-nøgle<input id="tok" type="password" autocomplete="off"></label><div class="row"><button class="primary" data-act="admin-in">Log ind</button></div></div>';
+  app.innerHTML=h;
+}
+
+function renderTasks(){
+  var all=[];sorted().forEach(function(m){(m.tasks||[]).forEach(function(t){all.push({m:m,t:t});});});
+  var own=owners(),h='<h2>Opgaver og aftaler</h2><div class="row"><label for="f-status">Status<select id="f-status" data-flt="filter"><option value="open">Åbne</option><option value="done">Udførte</option><option value="all">Alle</option></select></label>'
+    +'<label for="f-owner">Ansvarlig<select id="f-owner" data-flt="owner"><option value="">Alle</option>'+own.map(function(o){return '<option>'+esc(o)+'</option>';}).join("")+'</select></label></div>';
+  var list=all.filter(function(x){return (S.filter==="all"||(S.filter==="open")===!x.t.done)&&(!S.owner||x.t.owner===S.owner);})
+    .sort(function(a,b){return (a.t.due||"9999")<(b.t.due||"9999")?-1:1;});
+  var nOpen=all.filter(function(x){return !x.t.done;}).length,nLate=all.filter(function(x){return !x.t.done&&x.t.due&&x.t.due<today();}).length;
+  h+='<p class="small muted">'+nOpen+' åbne, heraf '+nLate+' over frist. '+(all.length-nOpen)+' udførte.</p>';
+  h+='<div class="card" style="gap:0">'+(list.length?list.map(function(x){return taskRow(x.m,x.t);}).join(""):'<p class="muted">Ingen opgaver her. Opgaver oprettes i referatet for et møde.</p>')+'</div>';
+  app.innerHTML=h;
+  document.getElementById("f-status").value=S.filter;document.getElementById("f-owner").value=S.owner;
+}
+
+function renderMeeting(){
+  var m=cur();if(!m){S.cur=null;return renderList();}
+  var h='<div class="row between"><button data-act="back">Alle møder</button><span class="row">'+chipAgenda(m)+chipMin(m)+'</span></div>';
+  h+='<div><h2>Bestyrelsesmøde '+esc(fdate(m.date,true))+'</h2><p class="muted">'+(m.time?"Kl. "+esc(m.time):"Tidspunkt mangler")+" - "+esc(m.place||"Sted mangler")+'</p></div>';
+  if(S.err)h+='<p class="note err">'+esc(S.err)+'</p>';
+  h+=S.aDraft?agendaEdit():agendaRead(m);
+  if(!S.aDraft)h+=S.mDraft?minutesEdit(m):minutesRead(m);
+  if(canWrite&&!editing())h+='<div class="row"><button class="danger" data-act="del">'+(S.confirmDel?"Bekræft: slet mødet med referat og opgaver":"Slet møde")+'</button></div>';
+  app.innerHTML=h;
+}
+
+function agendaRead(m){
+  var h='<section class="card"><div class="row between"><h3>Dagsorden</h3><span class="row">'+(canWrite?'<button data-act="a-edit">Rediger</button>':"")+'<button data-act="copy-a">Kopiér</button></span></div><ol class="agenda">';
+  (m.items||[]).forEach(function(it){h+='<li><div><h4>'+esc(it.title||"(uden titel)")+'</h4>'+(it.note?'<p class="muted small pre">'+esc(it.note)+'</p>':"")+'</div></li>';});
+  h+='<li><div><h4>Eventuelt</h4></div></li></ol></section>';return h;
+}
+function agendaEdit(){
+  var d=S.aDraft,h='<section class="card"><h3>Dagsorden - redigerer</h3><div class="row"><label for="a-date">Dato<input id="a-date" type="date" data-a="date" value="'+esc(d.date)+'"></label>'
+    +'<label for="a-time">Tidspunkt<input id="a-time" type="time" data-a="time" value="'+esc(d.time)+'"></label><label for="a-place">Sted<input id="a-place" data-a="place" value="'+esc(d.place)+'"></label></div><ol class="agenda">';
+  d.items.forEach(function(it,i){h+='<li><div><input id="ai-'+i+'" data-ai="'+i+'" data-k="title" value="'+esc(it.title)+'" placeholder="Punktets titel" aria-label="Titel på punkt '+(i+1)+'">'
+    +'<textarea id="an-'+i+'" data-ai="'+i+'" data-k="note" placeholder="Evt. uddybning, bilag eller hvem der fremlægger" aria-label="Uddybning af punkt '+(i+1)+'">'+esc(it.note)+'</textarea>'
+    +'<div class="row"><button class="icon" data-act="a-up" data-i="'+i+'"'+(i?"":" disabled")+' aria-label="Flyt op">Op</button><button class="icon" data-act="a-down" data-i="'+i+'"'+(i<d.items.length-1?"":" disabled")+' aria-label="Flyt ned">Ned</button><button class="icon danger" data-act="a-del" data-i="'+i+'">Fjern</button></div></div></li>';});
+  h+='<li><div><h4>Eventuelt</h4><p class="muted small">Fast sidste punkt på alle dagsordener.</p></div></li></ol>'
+    +'<div class="row"><button data-act="a-add">Tilføj punkt</button></div><div class="row"><button class="primary" data-act="a-approve">Godkend dagsorden</button><button data-act="a-save">Gem som klade</button><button data-act="a-cancel">Fortryd</button></div></section>';
+  return h;
+}
+
+function minutesRead(m){
+  var mi=m.minutes,h='<section class="card"><div class="row between"><h3>Referat</h3>';
+  if(mi)h+='<span class="row">'+(canWrite?'<button data-act="m-edit">Rediger</button>':"")+'<button data-act="copy-m">Kopiér</button></span>';
+  h+='</div>';
+  if(!mi){
+    if(!canWrite)return h+'<p class="muted">Der er ikke skrevet referat endnu.</p></section>';
+    h+='<p class="small muted">Send transskriptionen og mødedatoen til Claude, så ligger referatkladen her bagefter - klar til at rette og godkende. Du kan også skrive referatet selv.</p><div class="row"><button data-act="m-blank">Skriv referat selv</button></div>';
+    return h+'</section>';
+  }
+  h+='<p class="small"><strong>Til stede:</strong> '+esc(mi.present||"-")+'<br><strong>Afbud:</strong> '+esc(mi.absent||"-")+'</p><ol class="agenda">';
+  (m.items||[]).forEach(function(it){var r=(mi.items||{})[it.id]||{},dec=(r.decisions||"").split("\n").filter(function(x){return x.trim();});
+    h+='<li><div><h4>'+esc(it.title)+'</h4><p class="pre">'+esc(r.summary||NOT_TREATED)+'</p>'+(dec.length?'<div class="small"><strong>Beslutninger</strong><ul class="dec">'+dec.map(function(x){return '<li>'+esc(x.trim())+'</li>';}).join("")+'</ul></div>':"")+'</div></li>';});
+  h+='<li><div><h4>Eventuelt</h4><p class="pre">'+esc(mi.eventuelt||"Intet at bemærke.")+'</p></div></li></ol></section>';
+  h+='<section class="card"><h3>Opgaver og aftaler</h3><div>'+((m.tasks||[]).length?(m.tasks||[]).map(function(t){return taskRow(m,t);}).join(""):'<p class="muted">Ingen opgaver fra dette møde.</p>')+'</div></section>';
+  return h;
+}
+function minutesEdit(m){
+  var d=S.mDraft,h='<section class="card"><h3>Referat - redigerer</h3><div class="row"><label for="m-present">Til stede<input id="m-present" data-mf="present" value="'+esc(d.present)+'"></label><label for="m-absent">Afbud<input id="m-absent" data-mf="absent" value="'+esc(d.absent)+'"></label></div><ol class="agenda">';
+  (m.items||[]).forEach(function(it,i){var r=d.items[it.id];
+    h+='<li><div><h4>'+esc(it.title)+'</h4><label for="ms-'+i+'">Resumé<textarea id="ms-'+i+'" data-mi="'+esc(it.id)+'" data-k="summary">'+esc(r.summary)+'</textarea></label>'
+      +'<label for="md-'+i+'">Beslutninger - én pr. linje<textarea id="md-'+i+'" data-mi="'+esc(it.id)+'" data-k="decisions" style="min-height:52px">'+esc(r.decisions)+'</textarea></label></div></li>';});
+  h+='<li><div><h4>Eventuelt</h4><label for="m-ev">Resumé<textarea id="m-ev" data-mf="eventuelt">'+esc(d.eventuelt)+'</textarea></label></div></li></ol></section>';
+  h+='<section class="card"><h3>Opgaver og aftaler</h3><datalist id="owners">'+owners().map(function(o){return '<option value="'+esc(o)+'">';}).join("")+'</datalist>';
+  d.tasks.forEach(function(t,i){h+='<div class="tedit"><textarea id="tt-'+i+'" data-ti="'+i+'" data-k="text" style="min-height:52px" placeholder="Hvad skal gøres?" aria-label="Opgave '+(i+1)+'">'+esc(t.text)+'</textarea>'
+    +'<div class="row"><label for="to-'+i+'">Ansvarlig<input id="to-'+i+'" list="owners" data-ti="'+i+'" data-k="owner" value="'+esc(t.owner)+'"></label><label for="td-'+i+'">Frist<input id="td-'+i+'" type="date" data-ti="'+i+'" data-k="due" value="'+esc(t.due)+'"></label>'
+    +'<label for="tp-'+i+'">Punkt<select id="tp-'+i+'" data-ti="'+i+'" data-k="itemId"><option value="">Eventuelt / andet</option>'+(m.items||[]).map(function(it,n){return '<option value="'+esc(it.id)+'"'+(t.itemId===it.id?" selected":"")+'>'+(n+1)+". "+esc(it.title)+'</option>';}).join("")+'</select></label></div>'
+    +'<div class="row"><button class="icon danger" data-act="t-del" data-i="'+i+'">Fjern opgave</button></div></div>';});
+  h+='<div class="row"><button data-act="t-add">Tilføj opgave</button></div></section>'
+    +'<div class="row"><button class="primary" data-act="m-approve">Godkend referat</button><button data-act="m-save">Gem som klade</button><button data-act="m-cancel">Fortryd</button>'
+    +(m.minutes&&m.minutes.status==="klade"?'<button class="danger" data-act="m-discard">Kassér klade</button>':"")+'</div>';
+  return h;
+}
+
+function render(){
+  document.getElementById("nav-moeder").className=view()==="meetings"?"on":"";
+  document.getElementById("nav-opgaver").className=view()==="tasks"?"on":"";
+  if(!loaded){app.innerHTML='<p class="muted">'+esc(loadNote||"Henter møder...")+'</p>';return;}
+  if(needCode){app.innerHTML='<div class="card"><h3>Bestyrelsens kode</h3><p class="small muted">Indtast den fælles kode for at se dagsordener, referater og opgaver. Telefonen husker den bagefter.</p>'
+    +(codeErr?'<p class="note err">'+esc(codeErr)+'</p>':"")+'<label for="code">Kode<input id="code" type="password" autocomplete="off" autocapitalize="off"></label><div class="row"><button class="primary" data-act="code-in">Åbn</button></div></div>';return;}
+  if(view()==="tasks")renderTasks();else if(S.cur)renderMeeting();else renderList();
+}
+
+/* ---------- minutes helpers ---------- */
+function minutesDraft(m){var mi=m.minutes||{},d={present:mi.present||"",absent:mi.absent||"",eventuelt:mi.eventuelt||"",items:{},tasks:clone(m.tasks||[])};
+  (m.items||[]).forEach(function(it){var r=(mi.items||{})[it.id]||{};d.items[it.id]={summary:r.summary||"",decisions:r.decisions||""};});return d;}
+function applyMinutes(m,status){var d=S.mDraft,n=clone(m);
+  n.minutes={status:status,present:d.present.trim(),absent:d.absent.trim(),eventuelt:d.eventuelt.trim(),items:{}};
+  (m.items||[]).forEach(function(it){n.minutes.items[it.id]={summary:d.items[it.id].summary.trim(),decisions:d.items[it.id].decisions.trim()};});
+  n.tasks=d.tasks.filter(function(t){return t.text.trim();}).map(function(t){return {id:t.id,text:t.text.trim(),owner:(t.owner||"").trim(),due:t.due||"",itemId:t.itemId||"",done:!!t.done,doneAt:t.doneAt||""};});
+  return n;}
+/* ---------- actions ---------- */
+async function act(a,el){
+  var m=cur(),i=+el.getAttribute("data-i");
+  if(a!=="del")S.confirmDel=false;
+  S.err="";
+  switch(a){
+    case "new":{var id=uid(),n={id:id,date:"",time:"",place:"",agendaStatus:"klade",items:TEMPLATE.map(function(t){return {id:uid(),title:t,note:""};}),minutes:null,tasks:[],createdAt:new Date().toISOString()};
+      await save(n);meetings[id]=n;S.cur=id;S.aDraft={date:"",time:"",place:"",items:clone(n.items)};break;}
+    case "open":S.cur=el.getAttribute("data-m");S.aDraft=S.mDraft=null;S.transcript="";if(view()==="tasks"){location.hash="#moeder";}window.scrollTo(0,0);break;
+    case "back":S.cur=null;S.aDraft=S.mDraft=null;break;
+    case "del":if(!S.confirmDel){S.confirmDel=true;break;}delete meetings[m.id];S.cur=null;S.confirmDel=false;await push("Slet møde");toast("Mødet er slettet");break;
+    case "a-edit":S.aDraft={date:m.date||"",time:m.time||"",place:m.place||"",items:clone(m.items||[])};break;
+    case "a-add":S.aDraft.items.push({id:uid(),title:"",note:""});break;
+    case "a-del":S.aDraft.items.splice(i,1);break;
+    case "a-up":case "a-down":{var j=a==="a-up"?i-1:i+1,it=S.aDraft.items;var tmp=it[i];it[i]=it[j];it[j]=tmp;break;}
+    case "a-cancel":S.aDraft=null;break;
+    case "a-save":case "a-approve":{var d=S.aDraft,ok=a==="a-approve";
+      if(ok&&!d.date){S.err="Vælg en mødedato, før dagsordenen godkendes.";break;}
+      if(d.items.some(function(x){return !x.title.trim();})){S.err="Alle punkter skal have en titel. Fjern tomme punkter.";break;}
+      var n2=clone(m);n2.date=d.date;n2.time=d.time;n2.place=d.place.trim();n2.items=d.items.map(function(x){return {id:x.id,title:x.title.trim(),note:(x.note||"").trim()};});n2.agendaStatus=ok?"godkendt":"klade";
+      await save(n2);meetings[m.id]=n2;S.aDraft=null;toast(ok?"Dagsorden godkendt":"Klade gemt");break;}
+    case "copy-a":case "copy-m":try{await navigator.clipboard.writeText(a==="copy-a"?agendaText(m):minutesText(m));toast("Kopieret - klar til at sætte ind i mail");}catch(e){toast("Kunne ikke kopiere fra denne visning");}return;
+    case "code-in":{code=(document.getElementById("code").value||"").trim();if(!code)break;await openData(sealed);if(!needCode){try{localStorage.setItem("sg-code",code);}catch(e){}}break;}
+    case "refresh":await load();toast("Opdateret");break;
+    case "admin":S.admin=!S.admin;break;
+    case "admin-out":dropToken();S.admin=false;await load();break;
+    case "admin-in":{var v=(document.getElementById("tok").value||"").trim();if(!v){S.err="";break;}token=v;
+      var rr;try{rr=await gh("GET");}catch(e){rr={ok:false,status:0};}
+      if(!rr.ok&&rr.status!==404){token="";toast(rr.status===0?"Ingen forbindelse":"Nøglen har ikke adgang til dette repo");break;}
+      try{localStorage.setItem("sg-token",v);}catch(e){}canWrite=true;S.admin=false;await load();toast("Logget ind som redaktør");break;}
+    case "m-blank":S.mDraft=minutesDraft(m);break;
+    case "m-edit":S.mDraft=minutesDraft(m);break;
+    case "m-cancel":S.mDraft=null;break;
+    case "m-discard":{var n3=clone(m);n3.minutes=null;n3.tasks=(m.tasks||[]).filter(function(t){return t.done;});await save(n3);meetings[m.id]=n3;S.mDraft=null;toast("Kladen er kasseret");break;}
+    case "t-add":S.mDraft.tasks.push({id:uid(),text:"",owner:"",due:"",itemId:"",done:false,doneAt:""});break;
+    case "t-del":S.mDraft.tasks.splice(i,1);break;
+    case "m-save":case "m-approve":{var okm=a==="m-approve",dm=S.mDraft;
+      if(okm){var miss=(m.items||[]).filter(function(x){return !dm.items[x.id].summary.trim();});
+        if(miss.length){S.err="Alle punkter skal have et resumé. Mangler: "+miss.map(function(x){return x.title;}).join(", ")+".";break;}
+        if(dm.tasks.some(function(t){return t.text.trim()&&!(t.owner||"").trim();})){S.err="Alle opgaver skal have en ansvarlig, før referatet godkendes.";break;}}
+      var n4=applyMinutes(m,okm?"godkendt":"klade");await save(n4);meetings[m.id]=n4;S.mDraft=null;toast(okm?"Referat godkendt":"Klade gemt");break;}
+  }
+  render();
+}
+
+app.addEventListener("click",function(e){var el=e.target.closest("[data-act]");if(!el||el.type==="checkbox")return;if(el.disabled)return;act(el.getAttribute("data-act"),el).catch(function(){render();});});
+app.addEventListener("change",function(e){var el=e.target;
+  if(el.getAttribute("data-act")==="toggle"){var m=meetings[el.getAttribute("data-m")];if(!m)return;var n=clone(m);
+    n.tasks.forEach(function(t){if(t.id===el.getAttribute("data-t")){t.done=el.checked;t.doneAt=el.checked?new Date().toISOString():"";}});
+    meetings[m.id]=n;render();save(n).catch(function(){meetings[m.id]=m;render();});return;}
+  if(el.hasAttribute("data-flt")){S[el.getAttribute("data-flt")]=el.value;render();}
+});
+app.addEventListener("input",function(e){var el=e.target,k=el.getAttribute("data-k");
+  if(el.hasAttribute("data-a")&&S.aDraft)S.aDraft[el.getAttribute("data-a")]=el.value;
+  else if(el.hasAttribute("data-ai")&&S.aDraft)S.aDraft.items[+el.getAttribute("data-ai")][k]=el.value;
+  else if(el.hasAttribute("data-mf")&&S.mDraft)S.mDraft[el.getAttribute("data-mf")]=el.value;
+  else if(el.hasAttribute("data-mi")&&S.mDraft)S.mDraft.items[el.getAttribute("data-mi")][k]=el.value;
+  else if(el.hasAttribute("data-ti")&&S.mDraft)S.mDraft.tasks[+el.getAttribute("data-ti")][k]=el.value;
+});
+window.addEventListener("hashchange",render);
+document.getElementById("nav-moeder").addEventListener("click",function(){if(!editing()){S.cur=null;render();}});
+
+/* ---------- start ---------- */
+async function start(){
+  try{token=localStorage.getItem("sg-token")||"";code=localStorage.getItem("sg-code")||"";}catch(e){}
+  canWrite=!!token||!!LOCAL;render();
+  if(!LOCAL&&"serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(function(){});
+  try{await load();}catch(e){loaded=true;loadNote="Møderne kunne ikke hentes. Tjek forbindelsen og tryk Opdater.";}
+  render();
+}
+start();
+})();
+</script>
+</body>
+</html>
