@@ -1,63 +1,50 @@
 # Strong Gym bestyrelse
 
-App til bestyrelsens dagsordener, referater og opgaver. Statisk side på GitHub Pages, installeres på telefonen via "Installer app" / "Føj til hjemmeskærm".
+App til bestyrelsens dagsordener, referater, forslag og opgaver. Siden ligger på GitHub Pages og installeres på telefonen via "Installer app" / "Føj til hjemmeskærm". Data og login ligger i Firebase-projektet `strong-gym-bestyrelse-1`.
 
 ## Sådan virker den
 
-- `data.json` er krypteret med bestyrelsens fælles kode. Uden koden kan ingen læse indholdet, hverken i appen eller på GitHub.
-- Bestyrelsen taster koden første gang, derefter husker telefonen den.
-- Koden må ikke stå nogen steder i dette repo.
-- Kun redaktøren kan ændre noget. Redaktøren logger ind i appen (Møder -> Redaktør) med en GitHub-nøgle, som gemmes på den telefon.
-- Alt indhold ligger i `data.json`. Appen gemmer ved at skrive filen tilbage til repoet via GitHub.
-- Ændringer er synlige for de andre et minuts tid efter, når GitHub Pages har udgivet filen igen.
-
-## Opsætning
-
-1. Settings -> Pages -> Deploy from a branch -> `main`, mappe `/ (root)`.
-2. Lav en fine-grained token: Settings -> Developer settings -> Fine-grained tokens. Kun dette repo, Contents: Read and write.
-3. Åbn `https://johan-bc.github.io/SG-Bestyrelse/` på telefonen, installer appen, tast koden, og log ind som redaktør med nøglen.
+- Hvert medlem har sit eget login med mail og adgangskode. Formanden opretter medlemmet med navn, mail og rolle, og medlemmet vælger selv adgangskode første gang ("Opret login") og bekræfter sin mail.
+- Kun oprettede medlemmer kan se noget.
+- Formanden retter dagsorden, referat, opgaver og medlemmer og godkender forslag.
+- Alle medlemmer kan foreslå punkter til dagsordenen. Et forslag kommer først på, når formanden har godkendt det.
+- Opgaver tildeles et medlem. Medlemmet kan selv krydse sine egne opgaver af.
+- Reglerne håndhæves af Firestore, ikke kun af appen. De ligger i Firebase-projektet og er ikke en del af dette repo.
 
 ## Filer
 
-- `index.html` - hele appen
-- `data.json` - alle møder, krypteret. Den eneste fil der ændres i daglig brug
-- `tools/data.mjs` - dekrypterer og krypterer `data.json` uden for appen
-- `sw.js` - offline-cache. Hæv `CACHE`-navnet når `index.html` eller `sw.js` ændres
+- `index.html` - sidens skal og udseende
+- `app.js` - hele appen
+- `sw.js` - cache. Hæv `CACHE`-navnet når `index.html`, `app.js` eller `sw.js` ændres, ellers hænger den gamle udgave i telefonen
 - `manifest.webmanifest`, `icon-*.png` - navn og ikon
 
-## Format for data.json
+`apiKey` i `app.js` er Firebases offentlige web-konfiguration og ikke en hemmelighed. Adgang styres af login og Firestore-reglerne.
 
-Filen på GitHub er `{v, salt, iv, ct}` (AES-GCM, nøgle fra koden via PBKDF2-SHA256, 200.000 runder). Dekrypteret ser den sådan ud:
+## Data i Firestore
 
-```json
-{"meetings":[{
-  "id": "unik-tekst",
-  "date": "2026-12-10", "time": "19:00", "place": "Strong Gym",
-  "agendaStatus": "klade | godkendt",
-  "items": [{"id": "unik-tekst", "title": "Økonomi", "note": ""}],
-  "minutes": null,
-  "tasks": [{"id": "unik-tekst", "text": "", "owner": "", "due": "2026-12-31", "itemId": "", "done": false, "doneAt": ""}],
-  "createdAt": "ISO-tid"
-}]}
-```
+- `members/{mail}`: `name`, `email`, `role` (formand, næstformand, kasserer, sekretær, bestyrelsesmedlem). Rollen formand giver redigeringsret.
+- `meetings/{id}`: `date`, `time`, `place`, `agendaStatus` (klade/godkendt), `items` [{`id`, `title`, `note`, `by`}], `minutes`, `createdAt`. Eventuelt står ikke i `items` - appen viser det altid som sidste punkt.
+- `minutes`: `status` (klade/godkendt), `present`, `absent`, `eventuelt`, `items` {punktets id: {`summary`, `decisions` - én pr. linje}}.
+- `tasks/{id}`: `meetingId`, `itemId`, `text`, `ownerEmail`, `due`, `done`, `doneAt`, `createdAt`.
+- `proposals/{id}`: `title`, `note`, `meetingId`, `byEmail`, `status` (afventer/godkendt/afvist), `createdAt`.
 
-`minutes` er `null` eller:
+## Referatklade fra en transskription
+
+Formanden kopierer dagsordenen i appen og sender den sammen med transskriptionen til Claude. Claude svarer med ét JSON-objekt, som indsættes under Referat - "Indlæs klade":
 
 ```json
-{"status": "klade | godkendt", "present": "navne", "absent": "navne", "eventuelt": "tekst",
- "items": {"<punktets id>": {"summary": "tekst", "decisions": "én beslutning pr. linje"}}}
+{"present": "navne", "absent": "navne",
+ "items": [{"nr": 1, "summary": "tekst", "decisions": ["beslutning"]}],
+ "eventuelt": "tekst",
+ "tasks": [{"text": "hvad skal gøres", "owner": "medlemmets navn", "due": "2026-12-31", "nr": 3}]}
 ```
 
-Eventuelt står ikke i `items`. Appen viser det altid som sidste punkt.
+Regler for kladen:
 
-## Regler når Claude skriver referat fra en transskription
-
-Johan sender transskription og mødedato. Claude dekrypterer med `SG_CODE=<koden> node tools/data.mjs decrypt > /tmp/plain.json`, finder mødet, skriver `minutes` med `status: "klade"`, krypterer med `SG_CODE=<koden> node tools/data.mjs encrypt /tmp/plain.json` og committer kun `data.json`. Den dekrypterede fil må aldrig committes. Johan retter og godkender i appen.
-
-- Følg dagsordenen punkt for punkt. Alle punkter skal med, i samme rækkefølge, under punktets eget id.
+- `nr` er punktets nummer på dagsordenen. Alle punkter skal med, i samme rækkefølge.
 - Brug kun det, der står i transskriptionen. Opfind ingenting. Skriv det, hvis noget er uklart.
 - Blev et punkt ikke behandlet: `summary` = "Punktet blev ikke behandlet på mødet."
-- `summary`: 2-6 nøgterne sætninger. `decisions`: konkrete beslutninger, tom tekst hvis ingen.
+- `summary`: 2-6 nøgterne sætninger. `decisions`: konkrete beslutninger, tom liste hvis ingen.
 - Alt uden for dagsordenen hører under `eventuelt`. Ellers "Intet at bemærke."
-- `tasks`: alle opgaver og aftaler, hvor nogen skal gøre noget efter mødet. `owner` er den ansvarlige, tom hvis det ikke blev aftalt. `due` kun hvis en frist blev nævnt. Behold eksisterende opgaver, der er krydset af.
-- Sæt aldrig `status` til `godkendt`. Det gør Johan.
+- `tasks`: alle opgaver og aftaler, hvor nogen skal gøre noget efter mødet. `owner` er medlemmets navn, som det står i appen, tom hvis det ikke blev aftalt. `due` kun hvis en frist blev nævnt. `nr` er punktet, opgaven hører til, 0 hvis ingen.
+- Kladen bliver aldrig godkendt automatisk. Det gør formanden i appen.
