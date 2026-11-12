@@ -17,7 +17,7 @@ const ROLES = ["formand", "næstformand", "kasserer", "sekretær", "bestyrelsesm
 let meetings = {}, tasks = {}, proposals = {}, members = {};
 let me = null;            // {email, name, role}
 let authState = "loading"; // loading | out | verify | nomember | in | error
-let authMsg = "";
+let authMsg = "", linkMsg = "";
 const S = { cur: null, aDraft: null, mDraft: null, err: "", confirmDel: false, filter: "open", owner: "", importText: "" };
 const app = document.getElementById("app");
 
@@ -66,11 +66,26 @@ const FireB = {
     this.f = { ...authM, ...fsM };
     const fb = appM.initializeApp(CFG);
     this.A = authM.getAuth(fb); this.db = fsM.getFirestore(fb);
+    await this.handleLink();
     authM.onAuthStateChanged(this.A, u => this.onUser(u));
+  },
+  // Links fra Firebases mails (bekræft mail, ny adgangskode) lander i appen og håndteres her.
+  async handleLink() {
+    const q = {}; location.search.replace(/^\?/, "").split("&").forEach(p => { const i = p.indexOf("="); if (i > 0) q[decodeURIComponent(p.slice(0, i)).replace(/^amp;/, "")] = decodeURIComponent(p.slice(i + 1)); });
+    if (!q.oobCode) return;
+    history.replaceState(null, "", location.pathname + location.hash);
+    if (q.mode === "resetPassword") { this.resetCode = q.oobCode; return; }
+    try {
+      await this.f.applyActionCode(this.A, q.oobCode);
+      if (this.A.authStateReady) await this.A.authStateReady();
+      const u = this.A.currentUser; if (u) { await u.reload(); await u.getIdToken(true); }
+      linkMsg = "Din mail er bekræftet." + (u ? "" : " Log ind for at fortsætte.");
+    } catch (e) { linkMsg = "Linket er udløbet eller allerede brugt. Log ind, og tryk \"Send mailen igen\"."; }
   },
   stop() { this.unsub.forEach(u => u()); this.unsub = []; },
   async onUser(u) {
     this.stop(); me = null; meetings = {}; tasks = {}; proposals = {}; members = {};
+    if (this.resetCode) { authState = "reset"; return render(); }
     if (!u) { authState = "out"; return render(); }
     if (!u.emailVerified) { authState = "verify"; return render(); }
     await this.enter(u);
@@ -113,6 +128,7 @@ const FireB = {
       : c === "auth/invalid-email" ? "Mailadressen er ikke gyldig."
       : c === "auth/too-many-requests" ? "For mange forsøg. Vent lidt og prøv igen."
       : c === "auth/network-request-failed" ? "Ingen forbindelse. Prøv igen."
+      : c === "auth/expired-action-code" || c === "auth/invalid-action-code" ? "Linket er udløbet eller allerede brugt. Bed om et nyt med \"Glemt adgangskode\"."
       : "Forkert mail eller adgangskode.";
   }
 };
@@ -159,6 +175,8 @@ function renderAuth() {
   let h = "";
   if (authState === "loading") h = '<p class="muted">Henter...</p>';
   else if (authState === "error") h = '<div class="card"><p>Appen kunne ikke få forbindelse. Tjek nettet og prøv igen.</p><div class="row"><button data-act="reload">Prøv igen</button></div></div>';
+  else if (authState === "reset") h = '<div class="card"><h3>Ny adgangskode</h3>' + (authMsg ? '<p class="note err">' + esc(authMsg) + '</p>' : "")
+    + '<label for="au-new">Ny adgangskode - mindst 6 tegn<input id="au-new" type="password" autocomplete="new-password"></label><div class="row"><button class="primary" data-act="au-setpw">Gem adgangskode</button></div></div>';
   else if (authState === "out") h = '<div class="card"><h3>Log ind</h3><p class="small muted">Brug den mail, formanden har oprettet dig med. Første gang vælger du selv en adgangskode med "Opret login".</p>'
     + (authMsg ? '<p class="note err">' + esc(authMsg) + '</p>' : "")
     + '<label for="au-mail">Mail<input id="au-mail" type="email" autocomplete="username" autocapitalize="off"></label><label for="au-pw">Adgangskode<input id="au-pw" type="password" autocomplete="current-password"></label>'
@@ -167,7 +185,7 @@ function renderAuth() {
     + (authMsg ? '<p class="note err">' + esc(authMsg) + '</p>' : "")
     + '<div class="row"><button class="primary" data-act="au-check">Jeg har bekræftet</button><button data-act="au-resend">Send mailen igen</button><button data-act="au-out">Log ud</button></div></div>';
   else if (authState === "nomember") h = '<div class="card"><h3>Ingen adgang</h3><p>Din mail er ikke oprettet som medlem af bestyrelsen. Bed formanden oprette dig, og log så ind igen.</p><div class="row"><button data-act="au-out">Log ud</button></div></div>';
-  app.innerHTML = h;
+  app.innerHTML = (linkMsg && authState !== "loading" ? '<p class="note">' + esc(linkMsg) + '</p>' : "") + h;
 }
 
 function renderList() {
@@ -352,6 +370,7 @@ async function authAct(a) {
   try {
     if (a === "au-out") { await B.signOut(); return; }
     if (a === "reload") { location.reload(); return; }
+    if (a === "au-setpw") { await f.confirmPasswordReset(A, FireB.resetCode, document.getElementById("au-new").value); FireB.resetCode = null; linkMsg = "Adgangskoden er ændret. Log ind med den nye."; authState = A.currentUser ? authState : "out"; await f.signOut(A); return; }
     if (a === "au-in") await f.signInWithEmailAndPassword(A, val("au-mail"), document.getElementById("au-pw").value);
     else if (a === "au-up") { const c = await f.createUserWithEmailAndPassword(A, val("au-mail"), document.getElementById("au-pw").value); await f.sendEmailVerification(c.user); }
     else if (a === "au-reset") { if (!val("au-mail")) { authMsg = "Skriv din mail først."; return render(); } await f.sendPasswordResetEmail(A, val("au-mail")); toast("Hvis mailen findes, er der sendt et link til ny adgangskode"); }
