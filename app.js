@@ -152,6 +152,10 @@ function minutesText(m) {
   return L.join("\n");
 }
 
+function appUrl() { return location.origin + location.pathname.replace(/[^/]*$/, ""); }
+function mailtoUrl(to, subject, body) { return "mailto:" + encodeURIComponent(to.join(",")) + "?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body); }
+function openMail(url) { const a = document.createElement("a"); a.href = url; a.style.display = "none"; document.body.appendChild(a); a.click(); a.remove(); }
+
 /* ---------- render ---------- */
 const chipAgenda = m => m.agendaStatus === "godkendt" ? '<span class="chip good">Dagsorden godkendt</span>' : '<span class="chip warn">Dagsorden - klade</span>';
 const chipMin = m => !m.minutes ? '<span class="chip none">Referat mangler</span>' : m.minutes.status === "godkendt" ? '<span class="chip good">Referat godkendt</span>' : '<span class="chip warn">Referat - klade</span>';
@@ -265,9 +269,13 @@ function renderMeeting() {
 }
 function agendaRead(m) {
   const pend = Object.values(proposals).filter(p => p.status === "afventer" && (!p.meetingId || p.meetingId === m.id)).length;
-  let h = '<section class="card"><div class="row between"><h3>Dagsorden</h3><span class="row">' + (isAdmin() ? '<button data-act="a-edit">Rediger</button>' : "") + '<button data-act="copy-a">Kopiér</button></span></div><ol class="agenda">';
+  const sent = m.agendaSentAt, canSend = isAdmin() && m.agendaStatus === "godkendt";
+  let h = '<section class="card"><div class="row between"><h3>Dagsorden</h3><span class="row">' + (isAdmin() ? '<button data-act="a-edit">Rediger</button>' : "")
+    + '<button data-act="copy-a">Kopiér</button>' + (canSend ? '<button class="' + (sent ? "" : "primary") + '" data-act="a-send">' + (sent ? "Send igen" : "Send til medlemmer") + '</button>' : "") + '</span></div><ol class="agenda">';
   (m.items || []).forEach(it => { h += '<li><div><h4>' + esc(it.title || "(uden titel)") + '</h4>' + (it.note ? '<p class="muted small pre">' + esc(it.note) + '</p>' : "") + (it.by ? '<p class="small muted">Foreslået af ' + esc(nameOf(it.by)) + '</p>' : "") + '</div></li>'; });
   h += '<li><div><h4>Eventuelt</h4></div></li></ol>';
+  if (sent) h += '<p class="small muted">Udsendt til medlemmerne ' + esc(fdate(String(sent).slice(0, 10))) + (m.agendaSentBy ? " af " + esc(nameOf(m.agendaSentBy)) : "") + '.</p>';
+  else if (canSend) h += '<p class="note">Dagsordenen er godkendt, men ikke sendt til medlemmerne endnu.</p>';
   if (pend && (!m.minutes)) h += '<p class="note">' + pend + (pend === 1 ? " forslag afventer" : " forslag afventer") + ' formandens godkendelse. Se forslagene under Møder.</p>';
   return h + '</section>';
 }
@@ -403,7 +411,23 @@ async function act(a, el) {
       if (d.items.some(x => !x.title.trim())) { S.err = "Alle punkter skal have en titel. Fjern tomme punkter."; break; }
       const n = clone(m); n.date = d.date; n.time = d.time; n.place = d.place.trim(); n.agendaStatus = ok ? "godkendt" : "klade";
       n.items = d.items.map(x => { const o = { id: x.id, title: x.title.trim(), note: (x.note || "").trim() }; if (x.by) o.by = x.by; return o; });
-      await B.saveMeeting(n); meetings[m.id] = n; S.aDraft = null; toast(ok ? "Dagsorden godkendt" : "Klade gemt"); break; }
+      const same = JSON.stringify([m.date, m.time, m.place, m.items]) === JSON.stringify([n.date, n.time, n.place, n.items]);
+      if (!same) { delete n.agendaSentAt; delete n.agendaSentBy; }
+      await B.saveMeeting(n); meetings[m.id] = n; S.aDraft = null; toast(ok ? (n.agendaSentAt ? "Dagsorden godkendt" : "Dagsorden godkendt - send den til medlemmerne") : "Klade gemt"); break; }
+    case "a-send": {
+      const to = memberList().map(mb => mb.email);
+      if (!to.length) { S.err = "Der er ingen medlemmer at sende til. Opret dem under Medlemmer."; break; }
+      const subject = "Dagsorden - bestyrelsesmøde " + fdate(m.date, true);
+      const body = agendaText(m) + "\n\nSe dagsordenen i appen: " + appUrl();
+      const full = mailtoUrl(to, subject, body);
+      let copied = false;
+      // Lange adresser afvises af nogle mailprogrammer: så åbnes en tom mail, og teksten lægges på udklipsholderen.
+      if (full.length > 1900) { try { await navigator.clipboard.writeText(body); copied = true; } catch (e) { } openMail(mailtoUrl(to, subject, copied ? "" : body)); }
+      else openMail(full);
+      const n = clone(m); n.agendaSentAt = new Date().toISOString(); n.agendaSentBy = me.email;
+      await B.saveMeeting(n); meetings[m.id] = n;
+      toast(copied ? "Mailen er åbnet. Dagsordenen er kopieret - indsæt den i mailen" : "Mailen er åbnet med " + to.length + " modtagere");
+      break; }
     case "copy-a": case "copy-m": try { await navigator.clipboard.writeText(a === "copy-a" ? agendaText(m) : minutesText(m)); toast("Kopieret"); } catch (e) { toast("Kunne ikke kopiere fra denne visning"); } return;
     case "m-blank": case "m-edit": S.mDraft = minutesDraft(m); break;
     case "m-import": try { S.mDraft = importDraft(m, S.importText); S.importText = ""; toast("Kladen er indlæst - ret til og gem"); } catch (e) { S.err = "Kladen kunne ikke læses. Indsæt hele teksten fra Claude, fra første { til sidste }."; } break;
