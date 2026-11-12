@@ -324,6 +324,7 @@ function render() {
   const v = view(), inn = authState === "in";
   [["moeder", "meetings"], ["opgaver", "tasks"], ["forslag", "proposals"], ["medlemmer", "members"]].forEach(([id, name]) => { document.getElementById("nav-" + id).className = inn && v === name ? "on" : ""; });
   document.getElementById("nav").style.display = inn ? "" : "none";
+  document.getElementById("nav-okonomi").style.display = LOCAL ? "none" : "";
   const who = document.getElementById("who");
   who.innerHTML = inn && me ? '<span class="small muted">' + esc(me.name) + " - " + esc(me.role) + '</span>' + (LOCAL ? "" : '<button class="icon small" data-act="au-out">Log ud</button>') : "";
   if (!inn) return renderAuth();

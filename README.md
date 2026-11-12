@@ -9,16 +9,18 @@ App til bestyrelsens dagsordener, referater, forslag og opgaver. Siden ligger p�
 - Formanden retter dagsorden, referat, opgaver og medlemmer og godkender forslag.
 - Alle medlemmer kan foreslå punkter til dagsordenen. Et forslag kommer først på, når formanden har godkendt det.
 - Opgaver tildeles et medlem. Medlemmet kan selv krydse sine egne opgaver af.
+- Fanen Økonomi viser medlemstal, resultat, kasse, prognose og ønskeliste til udstyr. Alle medlemmer kan se den. Formand og kasserer kan registrere måneder og rette ønskeliste og indstillinger.
 - Reglerne håndhæves af Firestore, ikke kun af appen. De ligger i Firebase-projektet og er ikke en del af dette repo.
 
 ## Filer
 
 - `index.html` - sidens skal og udseende
-- `app.js` - hele appen
-- `sw.js` - cache. Hæv `CACHE`-navnet når `index.html`, `app.js` eller `sw.js` ændres, ellers hænger den gamle udgave i telefonen
+- `app.js` - dagsordener, referater, forslag, opgaver og medlemmer
+- `okonomi.html` - økonomi og medlemstal, en selvstændig side med samme login
+- `sw.js` - cache. Hæv `CACHE`-navnet når `index.html`, `app.js`, `okonomi.html` eller `sw.js` ændres, ellers hænger den gamle udgave i telefonen
 - `manifest.webmanifest`, `icon-*.png` - navn og ikon
 
-`apiKey` i `app.js` er Firebases offentlige web-konfiguration og ikke en hemmelighed. Adgang styres af login og Firestore-reglerne.
+`apiKey` i `app.js` og `okonomi.html` er Firebases offentlige web-konfiguration og ikke en hemmelighed. Adgang styres af login og Firestore-reglerne.
 
 ## Data i Firestore
 
@@ -26,6 +28,7 @@ App til bestyrelsens dagsordener, referater, forslag og opgaver. Siden ligger p�
 - `meetings/{id}`: `date`, `time`, `place`, `agendaStatus` (klade/godkendt), `items` [{`id`, `title`, `note`, `by`}], `minutes`, `createdAt`. Eventuelt står ikke i `items` - appen viser det altid som sidste punkt.
 - `minutes`: `status` (klade/godkendt), `present`, `absent`, `eventuelt`, `items` {punktets id: {`summary`, `decisions` - én pr. linje}}.
 - `tasks/{id}`: `meetingId`, `itemId`, `text`, `ownerEmail`, `due`, `done`, `doneAt`, `createdAt`.
+- `fin_months/{åååå-mm}`, `fin_wishlist/{id}`, `fin_config/settings`: økonomisidens måneder, ønskeliste og indstillinger.
 - `proposals/{id}`: `title`, `note`, `meetingId`, `byEmail`, `status` (afventer/godkendt/afvist), `createdAt`.
 
 ## Referatklade fra en transskription
