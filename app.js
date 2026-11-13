@@ -11,6 +11,7 @@ const CFG = {
 };
 const SDK = "https://www.gstatic.com/firebasejs/10.12.2/";
 const TEMPLATE = ["Godkendelse af referat fra sidste møde", "Opfølgning på opgaver og aftaler", "Økonomi"];
+const FOLLOW_UP = "Opfølgning på opgaver og aftaler";
 const NOT_TREATED = "Punktet blev ikke behandlet på mødet.";
 const ROLES = ["formand", "næstformand", "kasserer", "sekretær", "bestyrelsesmedlem"];
 
@@ -39,6 +40,8 @@ function fdate(s, long) {
 }
 function toast(t) { const el = document.getElementById("toast"); el.textContent = t; el.style.display = "block"; clearTimeout(toast.t); toast.t = setTimeout(() => { el.style.display = "none"; }, 3000); }
 function view() { const h = location.hash; return h === "#opgaver" ? "tasks" : h === "#medlemmer" ? "members" : "meetings"; }
+function hashMeeting() { const r = /^#moede-(.+)$/.exec(location.hash); return r ? r[1] : null; }
+function meetingUrl(id) { return appUrl() + "#moede-" + id; }
 function sorted() { return Object.values(meetings).sort((a, b) => (b.date || "9999") < (a.date || "9999") ? -1 : 1); }
 
 /* ---------- backends ---------- */
@@ -135,9 +138,18 @@ const FireB = {
 const B = LOCAL ? LocalB : FireB;
 
 /* ---------- text export ---------- */
+function taskLine(t) { return "   - [" + (t.done ? "x" : " ") + "] " + t.text + " (" + (nameOf(t.ownerEmail) || "ansvarlig mangler") + (t.due ? ", frist " + fdate(t.due) : "") + ")"; }
 function agendaText(m) {
   const L = ["Strong Gym - bestyrelsesmøde", "Dato: " + fdate(m.date, true) + (m.time ? " kl. " + m.time : ""), "Sted: " + (m.place || "-"), "", "DAGSORDEN"];
-  (m.items || []).forEach((it, i) => { L.push((i + 1) + ". " + it.title); if (it.note) L.push("   " + it.note.replace(/\n/g, "\n   ")); });
+  (m.items || []).forEach((it, i) => {
+    L.push((i + 1) + ". " + it.title); if (it.note) L.push("   " + it.note.replace(/\n/g, "\n   "));
+    if (isFollowUp(it)) {
+      const f = followUp(m);
+      if (!f.fromPrev.length && !f.open.length) L.push("   Ingen opgaver at følge op på.");
+      if (f.fromPrev.length) { L.push("   Fra mødet " + fdate(f.prev.date) + ":"); f.fromPrev.forEach(t => L.push(taskLine(t))); }
+      if (f.open.length) { L.push("   Øvrige uløste opgaver:"); f.open.forEach(t => L.push(taskLine(t))); }
+    }
+  });
   L.push(((m.items || []).length + 1) + ". Eventuelt"); return L.join("\n");
 }
 function minutesText(m) {
@@ -152,6 +164,23 @@ function minutesText(m) {
   return L.join("\n");
 }
 
+const isFollowUp = (it) => !!it.follow || (it.title || "").trim().toLowerCase() === FOLLOW_UP.toLowerCase();
+// Opfølgningspunktet samler alt fra sidste møde, løst som uløst, plus alle uløste opgaver fra tidligere møder.
+function followUp(m) {
+  const prev = sorted().filter(x => x.id !== m.id && x.date && (!m.date || x.date < m.date))[0];
+  const fromPrev = prev ? meetingTasks(prev.id) : [];
+  const seen = {}; fromPrev.forEach(t => { seen[t.id] = 1; });
+  const open = Object.values(tasks).filter(t => !t.done && !seen[t.id] && t.meetingId !== m.id).sort((a, b) => (a.due || "9999") < (b.due || "9999") ? -1 : 1);
+  return { prev, fromPrev, open };
+}
+function followUpHtml(m) {
+  const f = followUp(m);
+  if (!f.fromPrev.length && !f.open.length) return '<p class="muted small">Ingen opgaver at følge op på.</p>';
+  let h = "";
+  if (f.fromPrev.length) h += '<p class="small muted">Fra mødet ' + esc(fdate(f.prev.date)) + '</p><div>' + f.fromPrev.map(t => taskRow(t, false)).join("") + '</div>';
+  if (f.open.length) h += '<p class="small muted">Øvrige uløste opgaver</p><div>' + f.open.map(t => taskRow(t, true)).join("") + '</div>';
+  return h;
+}
 function appUrl() { return location.origin + location.pathname.replace(/[^/]*$/, ""); }
 function mailtoUrl(to, subject, body) { return "mailto:" + encodeURIComponent(to.join(",")) + "?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body); }
 function openMail(url) { const a = document.createElement("a"); a.href = url; a.style.display = "none"; document.body.appendChild(a); a.click(); a.remove(); }
@@ -160,12 +189,13 @@ function openMail(url) { const a = document.createElement("a"); a.href = url; a.
 const chipAgenda = m => m.agendaStatus === "godkendt" ? '<span class="chip good">Dagsorden godkendt</span>' : '<span class="chip warn">Dagsorden - klade</span>';
 const chipMin = m => !m.minutes ? '<span class="chip none">Referat mangler</span>' : m.minutes.status === "godkendt" ? '<span class="chip good">Referat godkendt</span>' : '<span class="chip warn">Referat - klade</span>';
 function ownerChip(email) { const mb = members[email]; return '<span class="chip ' + (email ? "" : "crit") + '">' + esc(email ? nameOf(email) : "Ansvarlig mangler") + (mb && mb.role ? " - " + esc(mb.role) : "") + '</span>'; }
-function taskRow(t) {
+function taskRow(t, showMeeting) {
   const m = meetings[t.meetingId], late = !t.done && t.due && t.due < today(), can = isAdmin() || (me && t.ownerEmail === me.email);
+  if (showMeeting === undefined) showMeeting = view() === "tasks";
   return '<div class="task' + (t.done ? " done" : "") + '"><input type="checkbox" id="tk-' + esc(t.id) + '" data-act="toggle" data-t="' + esc(t.id) + '"' + (t.done ? " checked" : "") + (can ? "" : " disabled") + ' aria-label="Udført">'
     + '<div class="stack" style="gap:4px"><span class="tt pre">' + esc(t.text) + '</span><div class="row small">' + ownerChip(t.ownerEmail)
     + (t.due ? '<span class="' + (late ? "chip crit" : "muted") + '">Frist ' + esc(fdate(t.due)) + (late ? " - overskredet" : "") + '</span>' : '<span class="muted">Ingen frist</span>')
-    + (view() === "tasks" && m ? '<button class="icon small" data-act="open" data-m="' + esc(m.id) + '">Møde ' + esc(fdate(m.date)) + '</button>' : "") + '</div></div></div>';
+    + (showMeeting && m ? '<button class="icon small" data-act="open" data-m="' + esc(m.id) + '">Møde ' + esc(fdate(m.date)) + '</button>' : "") + '</div></div></div>';
 }
 function memberOptions(sel, emptyLabel) {
   return '<option value="">' + esc(emptyLabel) + '</option>' + memberList().map(mb => '<option value="' + esc(mb.email) + '"' + (sel === mb.email ? " selected" : "") + '>' + esc(mb.name) + '</option>').join("");
@@ -217,7 +247,7 @@ function renderTasks() {
   const list = all.filter(t => (S.filter === "all" || (S.filter === "open") === !t.done) && (!S.owner || t.ownerEmail === S.owner)).sort((a, b) => (a.due || "9999") < (b.due || "9999") ? -1 : 1);
   const nOpen = all.filter(t => !t.done).length, nLate = all.filter(t => !t.done && t.due && t.due < today()).length;
   h += '<p class="small muted">' + nOpen + ' åbne, heraf ' + nLate + ' over frist. ' + (all.length - nOpen) + ' udførte.</p>';
-  h += '<div class="card" style="gap:0">' + (list.length ? list.map(taskRow).join("") : '<p class="muted">Ingen opgaver her. Opgaver oprettes i referatet for et møde.</p>') + '</div>';
+  h += '<div class="card" style="gap:0">' + (list.length ? list.map(t => taskRow(t)).join("") : '<p class="muted">Ingen opgaver her. Opgaver oprettes i referatet for et møde.</p>') + '</div>';
   app.innerHTML = h;
   document.getElementById("f-status").value = S.filter; document.getElementById("f-owner").value = S.owner;
 }
@@ -277,7 +307,7 @@ function agendaRead(m) {
   const sent = m.agendaSentAt, canSend = isAdmin() && m.agendaStatus === "godkendt";
   let h = '<section class="card"><div class="row between"><h3>Dagsorden</h3><span class="row">' + (isAdmin() ? '<button data-act="a-edit">Rediger</button>' : "")
     + '<button data-act="copy-a">Kopiér</button>' + (canSend ? '<button class="' + (sent ? "" : "primary") + '" data-act="a-send">' + (sent ? "Send igen" : "Send til medlemmer") + '</button>' : "") + '</span></div><ol class="agenda">';
-  (m.items || []).forEach(it => { h += '<li><div><h4>' + esc(it.title || "(uden titel)") + '</h4>' + (it.note ? '<p class="muted small pre">' + esc(it.note) + '</p>' : "") + (it.by ? '<p class="small muted">Foreslået af ' + esc(nameOf(it.by)) + '</p>' : "") + '</div></li>'; });
+  (m.items || []).forEach(it => { h += '<li><div><h4>' + esc(it.title || "(uden titel)") + '</h4>' + (it.note ? '<p class="muted small pre">' + esc(it.note) + '</p>' : "") + (it.by ? '<p class="small muted">Foreslået af ' + esc(nameOf(it.by)) + '</p>' : "") + (isFollowUp(it) ? followUpHtml(m) : "") + '</div></li>'; });
   h += '<li><div><h4>Eventuelt</h4></div></li></ol>';
   if (sent) h += '<p class="small muted">Udsendt til medlemmerne ' + esc(fdate(String(sent).slice(0, 10))) + (m.agendaSentBy ? " af " + esc(nameOf(m.agendaSentBy)) : "") + '.</p>';
   else if (canSend) h += '<p class="note">Dagsordenen er godkendt, men ikke sendt til medlemmerne endnu.</p>';
@@ -312,7 +342,7 @@ function minutesRead(m) {
   });
   h += '<li><div><h4>Eventuelt</h4><p class="pre">' + esc(mi.eventuelt || "Intet at bemærke.") + '</p></div></li></ol></section>';
   const ts = meetingTasks(m.id);
-  return h + '<section class="card"><h3>Opgaver og aftaler</h3><div>' + (ts.length ? ts.map(taskRow).join("") : '<p class="muted">Ingen opgaver fra dette møde.</p>') + '</div></section>';
+  return h + '<section class="card"><h3>Opgaver og aftaler</h3><div>' + (ts.length ? ts.map(t => taskRow(t, false)).join("") : '<p class="muted">Ingen opgaver fra dette møde.</p>') + '</div></section>';
 }
 function minutesEdit(m) {
   const d = S.mDraft; let h = '<section class="card"><h3>Referat - redigerer</h3><div class="row"><label for="m-present">Til stede<input id="m-present" data-mf="present" value="' + esc(d.present) + '"></label><label for="m-absent">Afbud<input id="m-absent" data-mf="absent" value="' + esc(d.absent) + '"></label></div><ol class="agenda">';
@@ -342,6 +372,8 @@ function render() {
   const who = document.getElementById("who");
   who.innerHTML = inn && me ? '<span class="small muted">' + esc(me.name) + " - " + esc(me.role) + '</span>' + (LOCAL ? "" : '<button class="icon small" data-act="au-out">Log ud</button>') : "";
   if (!inn) return renderAuth();
+  const hm = hashMeeting();
+  if (hm && meetings[hm] && !editing()) S.cur = hm;
   if (v === "tasks") renderTasks(); else if (v === "members") renderMembers(); else if (S.cur) renderMeeting(); else renderList();
 }
 
@@ -400,10 +432,10 @@ async function act(a, el) {
   if (a !== "del") S.confirmDel = false;
   S.err = "";
   switch (a) {
-    case "new": { const id = uid(), n = { id, date: "", time: "", place: "", agendaStatus: "klade", items: TEMPLATE.map(t => ({ id: uid(), title: t, note: "" })), minutes: null, createdAt: new Date().toISOString() };
+    case "new": { const id = uid(), n = { id, date: "", time: "", place: "", agendaStatus: "klade", items: TEMPLATE.map(t => ({ id: uid(), title: t, note: "", follow: t === FOLLOW_UP || undefined })), minutes: null, createdAt: new Date().toISOString() };
       await B.saveMeeting(n); meetings[id] = n; S.cur = id; S.aDraft = { date: "", time: "", place: "", items: clone(n.items) }; break; }
-    case "open": S.cur = el.getAttribute("data-m"); S.aDraft = S.mDraft = null; S.importText = ""; if (view() !== "meetings") location.hash = "#moeder"; window.scrollTo(0, 0); break;
-    case "back": S.cur = null; S.aDraft = S.mDraft = null; break;
+    case "open": S.cur = el.getAttribute("data-m"); S.aDraft = S.mDraft = null; S.importText = ""; location.hash = "#moede-" + S.cur; window.scrollTo(0, 0); break;
+    case "back": S.cur = null; S.aDraft = S.mDraft = null; if (hashMeeting()) location.hash = "#moeder"; break;
     case "del": if (!S.confirmDel) { S.confirmDel = true; break; }
       for (const t of meetingTasks(m.id)) { delete tasks[t.id]; await B.deleteTask(t.id); }
       delete meetings[m.id]; await B.deleteMeeting(m.id); S.cur = null; S.confirmDel = false; toast("Mødet er slettet"); break;
@@ -416,7 +448,7 @@ async function act(a, el) {
       if (ok && !d.date) { S.err = "Vælg en mødedato, før dagsordenen godkendes."; break; }
       if (d.items.some(x => !x.title.trim())) { S.err = "Alle punkter skal have en titel. Fjern tomme punkter."; break; }
       const n = clone(m); n.date = d.date; n.time = d.time; n.place = d.place.trim(); n.agendaStatus = ok ? "godkendt" : "klade";
-      n.items = d.items.map(x => { const o = { id: x.id, title: x.title.trim(), note: (x.note || "").trim() }; if (x.by) o.by = x.by; return o; });
+      n.items = d.items.map(x => { const o = { id: x.id, title: x.title.trim(), note: (x.note || "").trim() }; if (x.by) o.by = x.by; if (isFollowUp(x)) o.follow = true; return o; });
       const same = JSON.stringify([m.date, m.time, m.place, m.items]) === JSON.stringify([n.date, n.time, n.place, n.items]);
       if (!same) { delete n.agendaSentAt; delete n.agendaSentBy; }
       await B.saveMeeting(n); meetings[m.id] = n; S.aDraft = null; toast(ok ? (n.agendaSentAt ? "Dagsorden godkendt" : "Dagsorden godkendt - send den til medlemmerne") : "Klade gemt"); break; }
@@ -424,15 +456,12 @@ async function act(a, el) {
       const to = memberList().map(mb => mb.email);
       if (!to.length) { S.err = "Der er ingen medlemmer at sende til. Opret dem under Medlemmer."; break; }
       const subject = "Dagsorden - bestyrelsesmøde " + fdate(m.date, true);
-      const body = agendaText(m) + "\n\nSe dagsordenen i appen: " + appUrl();
-      const full = mailtoUrl(to, subject, body);
-      let copied = false;
-      // Lange adresser afvises af nogle mailprogrammer: så åbnes en tom mail, og teksten lægges på udklipsholderen.
-      if (full.length > 1900) { try { await navigator.clipboard.writeText(body); copied = true; } catch (e) { } openMail(mailtoUrl(to, subject, copied ? "" : body)); }
-      else openMail(full);
+      const body = ["Hej", "", "Dagsordenen til bestyrelsesmødet " + fdate(m.date, true) + (m.time ? " kl. " + m.time : "") + (m.place ? " i " + m.place : "") + " er klar.",
+        "", meetingUrl(m.id), "", "Opgaver og referat ligger samme sted.", "", "Mvh", me.name].join("\n");
+      openMail(mailtoUrl(to, subject, body));
       const n = clone(m); n.agendaSentAt = new Date().toISOString(); n.agendaSentBy = me.email;
       await B.saveMeeting(n); meetings[m.id] = n;
-      toast(copied ? "Mailen er åbnet. Dagsordenen er kopieret - indsæt den i mailen" : "Mailen er åbnet med " + to.length + " modtagere");
+      toast("Mailen er åbnet med " + to.length + " modtagere");
       break; }
     case "copy-a": case "copy-m": try { await navigator.clipboard.writeText(a === "copy-a" ? agendaText(m) : minutesText(m)); toast("Kopieret"); } catch (e) { toast("Kunne ikke kopiere fra denne visning"); } return;
     case "m-blank": case "m-edit": S.mDraft = minutesDraft(m); break;
@@ -484,7 +513,7 @@ app.addEventListener("input", e => {
   else if (el.hasAttribute("data-ti") && S.mDraft) S.mDraft.tasks[+el.getAttribute("data-ti")][k] = el.value;
 });
 window.addEventListener("hashchange", () => { S.err = ""; render(); });
-document.getElementById("nav-moeder").addEventListener("click", () => { if (!editing()) { S.cur = null; render(); } });
+document.getElementById("nav-moeder").addEventListener("click", () => { if (editing()) return; S.cur = null; if (hashMeeting()) location.hash = "#moeder"; else render(); });
 
 render();
 if (!LOCAL && "serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => { });

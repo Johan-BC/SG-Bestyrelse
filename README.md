@@ -8,7 +8,8 @@ App til bestyrelsens dagsordener, referater, forslag og opgaver. Siden ligger p�
 - Kun oprettede medlemmer kan se noget.
 - Formanden retter dagsorden, referat, opgaver og medlemmer og godkender forslag.
 - Alle medlemmer kan foreslå punkter til dagsordenen. Et forslag kommer først på, når formanden har godkendt det.
-- Når en dagsorden er godkendt, sender formanden den til alle medlemmer med knappen "Send til medlemmer". Den åbner en mail i formandens eget mailprogram med alle medlemmer som modtagere og dagsordenen i teksten. Appen noterer, hvornår den blev sendt, og nulstiller noteringen, hvis dagsordenen ændres bagefter.
+- Dagsordenspunktet "Opfølgning på opgaver og aftaler" lister automatisk alle opgaver fra det foregående møde (også løste) samt alle uløste opgaver fra øvrige møder, uanset alder. Det gælder også eksisterende møder (matcher på titlen).
+- Når en dagsorden er godkendt, sender formanden den til alle medlemmer med knappen "Send til medlemmer". Den åbner en mail i formandens eget mailprogram med alle medlemmer som modtagere. Mailen indeholder kun et link, der åbner mødet direkte i appen (medlemmerne skal logge ind). Appen noterer, hvornår den blev sendt, og nulstiller noteringen, hvis dagsordenen ændres bagefter.
 - Opgaver tildeles et medlem. Medlemmet kan selv krydse sine egne opgaver af.
 - Fanen Økonomi viser medlemstal, resultat, kasse, prognose og ønskeliste til udstyr. Alle medlemmer kan se den. Formand og kasserer kan registrere måneder og rette ønskeliste og indstillinger.
 - Reglerne håndhæves af Firestore, ikke kun af appen. De ligger i Firebase-projektet og er ikke en del af dette repo.
